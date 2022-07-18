@@ -1,198 +1,280 @@
-# Project: Week 5: To-do list application
-## Introduction
-As of now, you have completed Project Week 4 and now have a backend implementation where your todo lists are saved to a file. The next step is to create backend services that will return todo lists we have saved to file. If you run the solution from week 4 you'll notice that everytime you create new todo lists, the file they are stored in is updated, but your aren't able to see the currently existing todo lists stored.  By adding these new backend services this week we'll be able to see the stored todo list entries and allow users to query for specific todo lists. In this week's assignmment you'll create two backend services 1) return all todo lists, 2) return all todo lists with a specified name.
+# Project: Week 7 - Security: To-do list application
 
+## Adding Authentication
 
-## Requirements
-Feature requirements (Week5 task is complete when you):
-+ Create a backend service to handle a GET request to return all todo lists
-+ Create a backend service to handle a GET request to return todo lists that match the name sent as a parameter to this request
-Optional
-+ From the front-end call the back-end service to get all todo lists currently stored when a user opens the Home page
-+ Create UI components (a textbox and a button) in the front-end to facilitate searching 
+For the Week 7 Lab, we will add authentication to the TODO app. To do this, we will add an npm package called `express-basic-auth` to help us read and validate Basic Authentication usernames and passwords. After authenticating, the client will need to send a cookie on future requests with a credential.
 
-Implementation requirements:
-+ Continue using the front-end and back-end frameworks from week 4.
+## Installation
 
-## Instructions
+In the server directory:
 
-### GET Service - Return all Services
+`npm install --save express-basic-auth`
 
-#### Implementation
+`npm install --save cookie-parser`
 
-1. Open to-do-list/backend/server.js
-2. Go to the GET listener "app.get("/get/items", getItems)"
-3. At the comment "//begin here" copy/paste/type the following code to read in the todo lists stored in the database.json file:
-```
-    var data = fs.readFileSync('database.json');
-```
-4. Return a response to whoever called the data we just read in, we will return the data from the file but parsed as JSON data:
-```
-    response.json(JSON.parse(data));
-```
-#### Testing
-We will test this service using the curl utility.  The curl utility is quite useful because it can send requests to services, simulating consuming applications that would utilize the backend service.
+## Backend Setup
 
-1. Stop the backend service if it's currently running (Ctrl-C the terminal/command window where you did the last "npm start" for the backend)
-2. Start the backend service, go to the "to-do-list/backend" directory and install required packages and start the backend:
-```
-    npm install
-    npm start
-```
+In the `backend` directory, create a new file called `authentication.js`. In it, paste the following code:
 
-3. Open another terminal or command window.  Type this curl command to send a request to this service:
 ```
-    curl http://localhost:8080/get/items
-```
+var crypto = require('crypto');
+var fs = require('fs');
+const basicAuth = require("express-basic-auth");
 
-### GET Service - Search for and Return a ToDo List
+// users holds user information that is backed up on file
+let users = {};
 
-#### Implementation
-1. Open to-do-list/backend/server.js
-2. Go to the GET listener "app.get("/get/searchitem",searchItems)"
-3. On the line after the comment "//begin here" copy/paste/type the following code, this will retrieve a parameter passed to this service, this parameter will be the name of the Todo List we will search for:
-```
-    var searchField = request.query.taskname;
-```
-4. Continue editing this function by adding the following to read in the database 
-```
-    var json = JSON.parse (fs.readFileSync('database.json'));
-```
-5. Add the following to take the data from the database and apply a filter, this will seperate out only the Todo lists that match our search parameter given to the backend service and stored in "searchField":
-```
-    var returnData = json.filter(jsondata => jsondata.Task === searchField);
-```
-6. Whether we have data to return (i.e. todo lists that matches the name we're looking for) or not (i.e. there were no todo lists with the name), we return a response to whoever called this service with the following:
-```
-    response.json(returnData);
-```
+// initialize users store from file
+(() => {
+    users = JSON.parse(fs.readFileSync('users.json', 'utf8')).users;
+})()
 
-#### Testing
+// performs a SHA256 hash of a string
+const sha256 = x => crypto.createHash('sha256').update(x, 'utf8').digest('hex');
 
+// looks for the username/password combo in the users store
+const authenticator = (user, password) => {
+    if(!users[user] || !user || !password) return false;
+    return basicAuth.safeCompare(sha256(password), users[user].passwordHash);
+}
 
-1. Stop the backend service if it's currently running (Ctrl-C the terminal/command window where you did the last "npm start" for the backend)
+// write the users store to file
+const writeUsers = (_users) => {
+    const data = {
+        users: _users
+    }
+    var json = JSON.stringify(data);
+    fs.writeFile("users.json", json, function (err, result) {
+        if (err) {
+            console.log("error", err);
+        } else {
+            console.log("Successfully wrote users");
+        }
+    });
+}
 
-2. Start the backend service, go to the "to-do-list/backend" directory and install required packages and start the backend (you can skip the npm install if you ran that already above):
-```
-    npm install
-    npm start
-```
+// update or insert a user object to the store
+// returns true/false to indicate success of the operation
+const upsertUser = (username, password, userDetail) => {
+    if(users[username]) {
+        if(basicAuth.safeCompare(sha256(password), users[username].passwordHash)) {
+            users[username] = { ...users[username], ...userDetail };
+        } else {
+            console.log("incorrect password in upsertUser");
+            return false;
+        }
+    } else {
+        users[username] = {
+            ...userDetail,
+            passwordHash: sha256(password)
+        }
+    }
+    writeUsers(users);
+    return true;
+}
 
-3. Open another terminal or command window.  
-Contruct a curl command to search for a task: 
-``` 
-    curl http://localhost:8080/get/searchitem?taskname=<nametosearchfor>
-```
+// express middleware for validating `user` cookie against users store
+const cookieAuth = (req, res, next) => {
+    if(!req.signedCookies.user || !users[req.signedCookies.user]) {
+        res.sendStatus(401);
+    } else {
+        next();
+    }
+}
 
-So for example, if you want to search for todo lists with a name of "hello", your command would be:
-```
-    curl http://localhost:8080/get/searchitem?taskname=hello
+module.exports = { authenticator, upsertUser, cookieAuth }
 ```
 
-If you want to search for a task name with a space in it, for example "hello world" you will need to use the html code for a space (%20) in your curl command, like this: 
+In this file, we hold user data in the `users` variable, and persist the data in `users.json`. To add default users, create the file `backend/users.json`, and paste this document in it:
+
 ```
-    curl http://localhost:8080/get/searchitem?taskname=hello%20world
+{
+  "users": {
+    "user": {
+      "passwordHash": "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8"
+    }
+  }
+}
+
 ```
 
-### Optional - Use the UI to Call the Backend Service to Return All Todo Lists
+This will add a user with the name `user` and password `password` to the user store. The user's plaintext password is not stored, but instead a SHA256 hash of it. The `authorizer` function hashes the password that the client sends, and checks it against the users store. This way we don't risk leaking a plaintext password.
 
-#### Implementation
-1. Open the front end component to-do-list/src/component/TodoData.js, on the line after the comment "//begin here" copy/paste/type the following code:
+The `upsertUser` function can be used to create new users and add them to the store.
+
+`cookieAuth` will be used to check for signed cookies on requests that indicate that a user has already authenticated.
+
+In `server.js` we will import `express-basic-auth` and the authentication file.
+
 ```
-        const [todos, setTodos] = useState([]);
-        
-        useEffect( () => { 
-            async function fetchData() {
-                try {
-                    const res = await Axios.get('http://localhost:8080/get/items'); 
-                    setTodos(JSON.stringify(res.data));
-                    console.log(JSON.stringify(res.data));
-                } catch (err) {
-                    console.log(err);
-                }
+const basicAuth = require("express-basic-auth");
+var { authenticator, upsertUser, cookieAuth } = require("./authentication");
+const auth = basicAuth({
+    authorizer: authenticator
+});
+const cookieParser = require("cookie-parser");
+app.use(cookieParser("82e4e438a0705fabf61f9854e3b575af"));
+
+...
+
+app.use(cors({
+    credentials: true,
+    origin: 'http://localhost:3000'
+}));
+```
+
+The `auth` variable is express middleware that we can add to endpoints to make them authenticated. Before the endpoints are run, the middleware uses the `authenticator` function to ensure the user has provided authentication. Also note the update to the `app.use(cors({}));` line. It's important so that our app can send credentials to the backend.
+
+Now let's add three new endpoints:
+
+```
+app.get("/authenticate", auth, (req, res) => {
+    console.log(`user logging in: ${req.auth.user}`);
+    res.cookie('user', req.auth.user, { signed: true });
+    res.sendStatus(200);
+});
+
+app.post("/users", (req, res) => {
+    const b64auth = (req.headers.authorization || '').split(' ')[1] || ''
+    const [username, password] = Buffer.from(b64auth, 'base64').toString().split(':')
+    const upsertSucceeded = upsertUser(username, password)
+    res.sendStatus(upsertSucceeded ? 200 : 401);
+});
+
+app.get("/logout", (req, res) => {
+    res.clearCookie('user');
+    res.end();
+});
+```
+
+`GET /authenticate` uses the `auth` middleware to verify that the user is authenticated. If the authentication succeeds, it will set a signed cookie on the response that will persist the user's authentication for later requests.
+
+`POST /users` will add a new user to the users store and update the users.json file.
+
+`GET /logout` will clear the signed `user` cookie.
+
+We can now make the other endpoints authenticated by adding the `cookieAuth` middleware which will check for the signed cookie:
+
+> app.post("/add/item", cookieAuth, addItem);
+>
+> app.get("/get/items", cookieAuth, getItems);
+>
+> app.get("/get/searchitem", cookieAuth, searchItems);
+
+## Frontend setup
+
+We first want a login screen for users to create an account or log in.
+
+Update App.js to add a login screen:
+
+```
+import * as api from './services/api';
+
+    ...
+
+    const [authenticated, setAuthenticated] = useState(false);
+    const [username, setUsername] = useState();
+    const [password, setPassword] = useState();
+
+    const authUser = async () => {
+       setAuthenticated(await api.authenticate(username, password));
+    }
+
+    const createUser = async () => {
+        await api.createUser(username, password);
+    }
+
+    return (
+        <div className="App">
+            {!authenticated ? (
+                <div>
+                    <label>Username: </label>
+                    <br />
+                    <input
+                        type="text"
+                        onChange={(e) => setUsername(e.target.value)}
+                    />
+                    <br />
+                    <label>Password: </label>
+                    <br />
+                    <input
+                        type="password"
+                        onChange={(e) => setPassword(e.target.value)}
+                    />
+                    <br />
+                    <button onClick={createUser}>Create User</button>
+                    <button onClick={authUser}>Login</button>
+                </div>
+            ) : (
+                <div className="App">
+                    <NavbarComp />
+                </div>
+            )}
+        </div>
+    );
+```
+
+This Login form will ask users to login before showing them the TODO app. It relies on a file called `src/services/api.js`. Create that file and add the following code:
+
+```
+import axios from "axios";
+
+const baseUrl = "http://localhost:8080";
+
+export const authenticate = async (username, password) => {
+    try {
+        await axios.get(`${baseUrl}/authenticate`, {
+            auth: { username, password },
+            withCredentials: true
+        });
+        return true;
+    } catch (e) {
+        console.log(e);
+        return false;
+    }
+};
+
+export const createUser = async (username, password) => {
+    try {
+        const options = {
+            auth: {
+                username: username,
+                password: password
             }
-            fetchData();
-        }, []);
-        return <div>{todos}</div>
-```
-2. Note the above code does a number of things, it makes use of the "useEffect" hook in react, and the await keyword, this combination is essentially telling react to wait for a call to a backend service to complete, then proceeds with the rest of the render.  Remember that nodeJS is asynchronous platform, so statements can get executed before data is prepared and ready to return. In the case of our Axios.get above, if we didn't have the await in front of it then the rest of the code will proceed and attempt to render before our response is returned from the backend service.  To solve this we said that this function is asynchronous and hence we will receive a response from the backend service before proceeding.
-
-3. An alternative is you could do something like we've seen in other services, store the response in state and update it as the data is returned, an example of this will be used in the search functionality next.
-
-#### Testing
-
-1. Go to the "to-do-list" directory and run the front-end and run:
-```
-    npm install
-    npm start
+        }
+        return await axios.post(`${baseUrl}/users`, {}, options);
+    } catch (e) {
+        console.log(e);
+    }
+}
 ```
 
-2. Open a terminal or command window and go to the to-do-list/backend directory and run the backend:
+These two functions interact with the API and send the username and password to be validated. Users can now log in, but for the cookies to be sent we need to add the `withCredentials` flag for Axios.
+
+For example, on the call to `/add/item`:
+
 ```
-    npm start
-```
-
-3. Go to a browser and open the front-end, if not open already, http://localhost:3000, this should bring up the home page. Go to the top navigation bar and click on the "TodoPage"
-
-4. Notice on page load that the top of the page is populated with all of your tasks, saved from the backend service.
-
-### Optional - Use the UI to search for a ToDo list
-
-#### Implementation
-
-1. Open the front end component to-do-list/src/component/SearchTodo.js, on the line after the comment "//begin here" copy/paste/type the following code:
-```
-            e.preventDefault();  
-            // HTTP Client to send a GET request
-            Axios({
-            method: "GET",
-            url: "http://localhost:8080/get/searchitem",
-            headers: {
-                "Content-Type": "application/json" 
-            },
-            params: {
-                taskname: this.state.content
-            }
-            }).then(res => {
-            this.setState({
-                tmpdata: JSON.stringify(res.data),
-                });
-        
-            });
-```
-2. Some things to note, there are some UI components defined in this file, the main things they will do is submit a form which will trigger the call to the searchitem backend service, as part of that submit we will take the name of the Todo to search for from the "this.state.content" parameter, the a user would type in the UI text box.
-3. Note also we have state associated with this component "tmpdata", this state will be set to the data returned from the backend service via the "this.setState({tmpdata: JSON.stringify(res.data),});" code we just put in the HandleSubmit method.
-4. We will use this state in the render function, underneath the search UI components you'll see "<div>{this.state.tmpdata}</div>", this is empty initially, because we haven't searched for anything, but once you supply a search parameter and click the "Search" button, we will set the state in the HandleSubmit, which will then update the state in our div to hold the return data from the backend service for the search.
-
-
-#### Testing
-1. Go to the "to-do-list" directory and run the front-end and run:
-```
-    npm install
-    npm start
+    Axios({
+      method: "POST",
+      url: "http://localhost:8080/add/item",
+      data: {jsonObject},
+      headers: {
+        "Content-Type": "application/json"
+      },
+      withCredentials: true
+    }).then(res => {
+      console.log(res.data.message);
+    });
 ```
 
-2. Open a terminal or command window and go to the to-do-list/backend directory and run the backend:
-```
-    npm start
-```
+## Conclusion
 
-3. Go to a browser and open the front-end, if not open already, http://localhost:3000, this should bring up the home page. Go to the top navigation bar and click on the "TodoPage"
+We have now protected our TODO API behind username and password, persisted the authentication info (without the plaintext password) in a file, and added authentication to the frontend through cookies.
 
-4. Notice the input text box and button that will search for a Todo list in the backend. Type a task name that you know exists or doesn't exist and click the button. (Note if you left the frontend and backend services running after completing the lab steps above make sure you refresh the page so the changes you made load correctly in the browser)
+To continue to improve the security of the TODO app, we might:
 
-5. Observe the returned value in the div section below the search UI, it will be updated in real-time after we submit the form, returning with the data obtained from the backend.
-
-## Pre-session Material
-What is a REST API
-https://www.redhat.com/en/topics/api/what-is-a-rest-api
-
-Rest APIS
-https://www.ibm.com/cloud/learn/rest-apis
-
-Microservices Architecture
-https://www.ibm.com/cloud/architecture/architectures/microservices
-
-Modernizing Applications
-https://www.ibm.com/cloud/architecture/architectures/application-modernization
-
+-   use a database for our authentication data
+-   switch the signed cookie for a token with authorization claim
+-   include an expiration / timeout on the cookie session
+-   scope authorization to view and delete TODO items to their creators
+-   serve the entire site (both frontend / backend) using HTTPS
