@@ -34,7 +34,7 @@ class AddTodo extends Component {
       currentDate: this.state.date,
       dueDate: this.state.due
     };
-
+  
     // HTTP Client to send a POST request
     Axios({
       method: "POST",
@@ -42,8 +42,7 @@ class AddTodo extends Component {
       data: {jsonObject},
       headers: {
         "Content-Type": "application/json"
-      },
-      withCredentials: true
+      }
     }).then(res => {
       console.log(res.data.message);
     });
