@@ -1,8 +1,8 @@
-# Project: Week 7 - Security: To-do list application
+# Project: Week 6 - Security: To-do list application
 
 ## Adding Authentication
 
-For the Week 7 Lab, we will add authentication to the TODO app. To do this, we will add an npm package called `express-basic-auth` to help us read and validate Basic Authentication usernames and passwords. After authenticating, the client will need to send a cookie on future requests with a credential.
+For the Week 6 Lab, we will add authentication to the TODO app. To do this, we will add an npm package called `express-basic-auth` to help us read and validate Basic Authentication usernames and passwords. After authenticating, the client will need to send a cookie on future requests with a credential.
 
 ## Installation
 
