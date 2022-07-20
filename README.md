@@ -6,7 +6,7 @@ For the Week 6 Lab, we will add authentication to the TODO app. To do this, we w
 
 ## Installation
 
-In the server directory:
+In the `backend` directory:
 
 `npm install --save express-basic-auth`
 
@@ -169,6 +169,7 @@ Update App.js to add a login screen:
 
 ```
 import * as api from './services/api';
+import React, { useState } from 'react';
 
     ...
 

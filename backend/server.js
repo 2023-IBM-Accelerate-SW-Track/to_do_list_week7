@@ -28,7 +28,6 @@ function addItem (request, response) {
       Current_date: curDate,
       Due_date: dueDate
     }
-    const jsonString = JSON.stringify(newTask)
   
     var data = fs.readFileSync('database.json');
     var json = JSON.parse(data);
@@ -43,7 +42,6 @@ function addItem (request, response) {
 app.get("/get/items", getItems)
 //** week5, get all items from the json database*/
   function getItems (request, response) {
-    //begin here
     var data = fs.readFileSync('database.json');
     
     //uncomment to see the data being returned 
@@ -56,16 +54,14 @@ app.get("/get/items", getItems)
 app.get("/get/searchitem",searchItems)
 //**week 5, search items service */
   function searchItems (request, response) {
-    //begin here
     var searchField = request.query.taskname;
     //uncomment to see the searchField passed in
     //console.log(searchField);
 
     var json = JSON.parse (fs.readFileSync('database.json'));
-    returnData = json.filter(jsondata => jsondata.Task === searchField);
+    var returnData = json.filter(jsondata => jsondata.Task === searchField);
 
     //uncomment to see the todolists found in the backend service// 
     //console.log(returnData);
     response.json(returnData);
-    //Note this won't work, why? response.send();
   }
