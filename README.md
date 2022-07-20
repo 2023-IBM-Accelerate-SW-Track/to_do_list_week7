@@ -155,11 +155,11 @@ app.get("/logout", (req, res) => {
 
 We can now make the other endpoints authenticated by adding the `cookieAuth` middleware which will check for the signed cookie:
 
-> app.post("/add/item", cookieAuth, addItem);
+> app.post("/items", cookieAuth, addItem);
 >
-> app.get("/get/items", cookieAuth, getItems);
+> app.get("/items", cookieAuth, getItems);
 >
-> app.get("/get/searchitem", cookieAuth, searchItems);
+> app.get("/items/search", cookieAuth, searchItems);
 
 ## Frontend setup
 
@@ -252,12 +252,12 @@ export const createUser = async (username, password) => {
 
 These two functions interact with the API and send the username and password to be validated. Users can now log in, but for the cookies to be sent we need to add the `withCredentials` flag for Axios.
 
-For example, on the call to `/add/item`:
+For example, on the call to `/item`:
 
 ```
     Axios({
       method: "POST",
-      url: "http://localhost:8080/add/item",
+      url: "http://localhost:8080/item",
       data: {jsonObject},
       headers: {
         "Content-Type": "application/json"

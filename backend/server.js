@@ -14,7 +14,7 @@ app.get("/", (req, res) => {
     });
 
 //add new item to json file
-app.post("/add/item", addItem)
+app.post("/items", addItem)
 
 function addItem (request, response) {
     // Converting Javascript object (Task Item) to a JSON string
@@ -39,7 +39,7 @@ function addItem (request, response) {
     response.send(200)
     }
 
-app.get("/get/items", getItems)
+app.get("/items", getItems)
 //** week5, get all items from the json database*/
   function getItems (request, response) {
     var data = fs.readFileSync('database.json');
@@ -51,7 +51,7 @@ app.get("/get/items", getItems)
     // Note this won't work, why? response.send();
   } 
 
-app.get("/get/searchitem",searchItems)
+app.get("/items/search",searchItems)
 //**week 5, search items service */
   function searchItems (request, response) {
     var searchField = request.query.taskname;
