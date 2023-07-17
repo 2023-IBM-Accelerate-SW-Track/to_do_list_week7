@@ -1,8 +1,8 @@
-# Project: Week 6 - Security: To-do list application
+# Project: Week 7 - Security: To-do list application
 
 ## Adding Authentication
 
-For the Week 6 Lab, we will add authentication to the TODO app. To do this, we will add an npm package called `express-basic-auth` to help us read and validate Basic Authentication usernames and passwords. After authenticating, the client will need to send a cookie on future requests with a credential.
+For the Week 7 Lab, we will add authentication to the TODO app. To do this, we will add an npm package called `express-basic-auth` to help us read and validate Basic Authentication usernames and passwords. After authenticating, the client will need to send a cookie on future requests with a credential.
 
 ## Installation
 
@@ -268,9 +268,33 @@ For example, on the call to `/item`:
     });
 ```
 
+## Testing
+1. Go to the *to-do-list* directory, if this is the first time running the front-end for this week execute the following:
+```
+    npm install
+    npm audit fix --force
+```
+2. Start the front end by running the following command in the *to-do-list* directory:
+```
+    npm start
+```
+
+3. Open *another* terminal or command window and go to the *to-do-list/backend* directory and run the backend:
+```
+    npm start
+```
+
+4. Go to a browser and open the front-end, if not open already, http://localhost:3000, this should bring up the user login page. Login with the username `user` and password `password`. 
+
+5. This will navigate to the home page. Go to the top navigation bar and click on the "SearchPage" link.
+
+6. Notice the input text box and button that will search for a Todo list in the backend. Type a task name that you know exists or doesn't exist and click the button. (Note if you left the frontend and backend services running after completing the lab steps above make sure you refresh the page so the changes you made load correctly in the browser)
+
+7. Observe the returned value in the div section below the search UI, it will be updated in real-time after we submit the form, returning with the data obtained from the backend.
+
 ## Conclusion
 
-We have now protected our TODO API behind username and password, persisted the authentication info (without the plaintext password) in a file, and added authentication to the frontend through cookies.
+We have now protected our TODO app behind username and password, persisted the authentication info (without the plaintext password) in a file, and added authentication to the frontend through cookies.
 
 To continue to improve the security of the TODO app, we might:
 
@@ -279,3 +303,10 @@ To continue to improve the security of the TODO app, we might:
 -   include an expiration / timeout on the cookie session
 -   scope authorization to view and delete TODO items to their creators
 -   serve the entire site (both frontend / backend) using HTTPS
+
+### Optional Exercise
+
+- Try to set up a simple authentication for the TODO app using [IBM Cloud App ID](https://cloud.ibm.com/docs/appid?topic=appid-getting-started) service by using the [tutorial](https://cloud.ibm.com/docs/appid?topic=appid-web-node).
+
+## Pre-session Material
+Here is a [**link**](https://ibm.ent.box.com/v/Software-recordings/folder/211334537222) to the pre-session material that was provided to you earlier.
